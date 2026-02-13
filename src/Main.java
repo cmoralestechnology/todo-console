@@ -1,5 +1,6 @@
 import repository.TareaRepository;
 import service.TareaService;
+import thread.RecordatorioTareaRunnable;
 
 import java.io.IOException;
 import java.time.DateTimeException;
@@ -12,19 +13,27 @@ public class Main {
 
     public static void main(String[] args) {
 
+        // Servicio que encapsula la lògica de negocio relacionada con las tareas
         TareaService service = new TareaService();
+
+        // Repositorio responsable de la persistencia
         TareaRepository repository = new TareaRepository();
 
-        // carga inicial
+        // carga inicial de datos:
         try {
             service.cargarInicial(repository.cargar());
         } catch (IOException e) {
             System.out.println("No se pudieron cargar las tareas. Se iniciará vacío.");
         }
+        // Hilo de recordatorio que se ejecuta en segundo plano para revisar tareas que vencen hoy
+        Thread recordatorioThread = new Thread(new RecordatorioTareaRunnable(service));
 
-        // Punto de entrada de la app
+        recordatorioThread.setDaemon(true);
+        recordatorioThread.start();
 
+        // scanner centralizado para toda la interacciòn con el usuario
         Scanner scanner = new Scanner(System.in);
+        // controla el ciclo de vida del menú principal
         boolean running = true;
 
         while (running) {
@@ -35,15 +44,16 @@ public class Main {
             try {
                 option = scanner.nextInt();
                 scanner.nextLine();
-
+            // captura entradas con la excepción evitando entradas que no sean númericas
             } catch (InputMismatchException ex) {
                 System.out.println("Entrada inválida. Debes ingresar un número ");
-                scanner.nextLine();
+                scanner.nextLine(); // descarta la entrada incorrecta
                 System.out.println();
                 continue;
             }
 
             switch (option) {
+                // Crear Tarea
                 case 1 -> {
                     try {
                         System.out.println("Ingrese descripción: ");
@@ -59,6 +69,7 @@ public class Main {
                         System.out.println("Formato de fecha inválido. Use yyyy-MM-dd");
                     }
                 }
+                // Leer / listar tareas
                 case 2 -> {
                     var tareas = service.obtenerTodas();
 
@@ -69,6 +80,7 @@ public class Main {
                         tareas.forEach(System.out::println);
                     }
                 }
+                // Actualizar tarea marcandola como completada
                 case 3 -> {
                     try {
                         System.out.println("Ingrese ID de la tarea a completar: ");
@@ -84,14 +96,15 @@ public class Main {
                         System.out.println(e.getMessage());
                     }
                 }
+                // Eliminar tarea
                 case 4 -> {
                     try {
                         System.out.println("Ingrese ID de la tarea a eliminar: ");
                         int id = scanner.nextInt();
                         scanner.nextLine();
 
-                        service.eliminarPorId(id);
-                        System.out.println("Tarea eliminada correctamente.");
+                        var tareaEliminada = service.eliminarPorId(id);
+                        System.out.println("Tarea eliminada: \"" + tareaEliminada.getDescripcion() + "\"");
                     } catch (InputMismatchException e) {
                         System.out.println("ID inválido. Debe ser un número");
                         scanner.nextLine();
@@ -99,6 +112,7 @@ public class Main {
                         System.out.println(e.getMessage());
                     }
                 }
+                // Salida del sistema con persistencia
                 case 5 -> {
                     try {
                         repository.guardar(service.obtenerTodas());
@@ -112,9 +126,11 @@ public class Main {
             }
         }
 
+        // Libera el recurso Scanner
         scanner.close();
     }
 
+    // Impresión del menú principal
     private static void printMenu() {
         System.out.println("GESTOR DE TAREAS");
         System.out.println("1.- Agregar Tarea");

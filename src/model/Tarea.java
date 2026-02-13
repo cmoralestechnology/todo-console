@@ -1,14 +1,17 @@
 package model;
 
+import annotation.Importancia;
+
 import java.time.LocalDate;
 
+@Importancia
 public class Tarea {
 
     private int id;
     private String descripcion;
     private LocalDate fechaVencimiento;
     private boolean completada;
-
+    // constructor que permite crear tareas inicializandolas con estos atributos
     public Tarea(int id, String descripcion, LocalDate fechaVencimiento, boolean completada) {
         this.id = id;
         this.descripcion = descripcion;
@@ -47,7 +50,7 @@ public class Tarea {
     public void setCompletada(boolean completada) {
         this.completada = completada;
     }
-
+    // muestra la info al usuario en consola
     @Override
     public String toString() {
         String estado = completada ? "COMPLETADA" : "PENDIENTE";
